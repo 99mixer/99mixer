@@ -1,0 +1,45 @@
+pragma solidity ^0.8.0;
+
+interface IBEP20 {
+    function transfer(address to, uint256 value) external returns (bool);
+    function transferFrom(address from, address to, uint256 value) external returns (bool);
+}
+
+contract CrossChainLock {
+    address public owner;
+    mapping(address => uint256) public lockedBalances;
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this function");
+        _;
+    }
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    function lockETH(address destinationChain, uint256 amount) public payable {
+        require(amount > 0, "Amount must be greater than 0");
+        lockedBalances[msg.sender] += amount;
+        // Implement cross-chain communication to lock ETH on the destination chain
+        // For example, using a bridge contract or a trusted oracle
+    }
+
+    function lockERC20(address tokenAddress, address destinationChain, uint256 amount) public {
+        require(amount > 0, "Amount must be greater than 0");
+        IBEP20 token = IBEP20(tokenAddress);
+        require(token.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        lockedBalances[msg.sender] += amount;
+        // Implement cross-chain communication to lock ERC20 on the destination chain
+        // For example, using a bridge contract or a trusted oracle
+    }
+
+    function unlock(address tokenAddress, uint256 amount) public onlyOwner {
+        require(amount > 0, "Amount must be greater than 0");
+        require(lockedBalances[msg.sender] >= amount, "Insufficient locked balance");
+        lockedBalances[msg.sender] -= amount;
+
+        IBEP20 token = IBEP20(tokenAddress);
+        require(token.transfer(msg.sender, amount), "Transfer failed");
+    }
+}
