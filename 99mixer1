@@ -1,0 +1,49 @@
+pragma solidity ^0.8.0;
+
+contract Mixer {
+    mapping(address => uint256) public balances;
+    mapping(address => bool) public isDeposited;
+    uint256 public totalDeposits;
+
+    event Deposit(address indexed user, uint256 amount);
+    event Withdraw(address indexed user, uint256 amount);
+    event Mixed(address indexed user, uint256 amount);
+
+    constructor() {
+        totalDeposits = 0;
+    }
+
+    modifier hasDeposited() {
+        require(isDeposited[msg.sender], "No deposit found");
+        _;
+    }
+
+    function deposit() public payable {
+        require(msg.value > 0, "Deposit amount must be greater than 0");
+        
+        if (!isDeposited[msg.sender]) {
+            isDeposited[msg.sender] = true;
+            totalDeposits += 1;
+        }
+        
+        balances[msg.sender] += msg.value;
+        emit Deposit(msg.sender, msg.value);
+    }
+
+    function withdraw(uint256 amount) public hasDeposited {
+        require(amount <= balances[msg.sender], "Insufficient balance");
+        balances[msg.sender] -= amount;
+        payable(msg.sender).transfer(amount);
+        emit Withdraw(msg.sender, amount);
+    }
+
+    function mixCoins() public hasDeposited {
+        uint256 mixAmount = balances[msg.sender];
+        balances[msg.sender] = 0;
+        emit Mixed(msg.sender, mixAmount);
+    }
+
+    function getBalance() public view returns (uint256) {
+        return balances[msg.sender];
+    }
+}
