@@ -1,0 +1,71 @@
+pragma solidity ^0.8.0;
+
+import "./IERC20.sol";
+
+contract DEX {
+    address public owner;
+    mapping(address => uint256) public balances;
+    mapping(address => mapping(address => uint256)) public allowances;
+
+    event Deposit(address indexed user, uint256 amount);
+    event Withdraw(address indexed user, uint256 amount);
+    event Trade(address indexed user, address indexed token, uint256 amount);
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this function");
+        _;
+    }
+
+    function depositETH() public payable {
+        require(msg.value > 0, "Amount must be greater than 0");
+        balances[msg.sender] += msg.value;
+        emit Deposit(msg.sender, msg.value);
+    }
+
+    function depositToken(address tokenAddress, uint256 amount) public {
+        require(amount > 0, "Amount must be greater than 0");
+        IERC20 token = IERC20(tokenAddress);
+        require(token.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        balances[msg.sender] += amount;
+        emit Deposit(msg.sender, amount);
+    }
+
+    function withdrawETH(uint256 amount) public {
+        require(amount > 0, "Amount must be greater than 0");
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+        payable(msg.sender).transfer(amount);
+        emit Withdraw(msg.sender, amount);
+    }
+
+    function withdrawToken(address tokenAddress, uint256 amount) public {
+        require(amount > 0, "Amount must be greater than 0");
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+        IERC20 token = IERC20(tokenAddress);
+        require(token.transfer(msg.sender, amount), "Transfer failed");
+        emit Withdraw(msg.sender, amount);
+    }
+
+    function trade(address tokenAddress, uint256 amount) public {
+        require(amount > 0, "Amount must be greater than 0");
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+        IERC20 token = IERC20(tokenAddress);
+        require(token.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        balances[msg.sender] += amount;
+        emit Trade(msg.sender, tokenAddress, amount);
+    }
+
+    function setAllowance(address spender, uint256 amount) public {
+        allowances[msg.sender][spender] = amount;
+    }
+
+    function getAllowance(address account, address spender) public view returns (uint256) {
+        return allowances[account][spender];
+    }
+}
