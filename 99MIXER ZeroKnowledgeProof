@@ -1,0 +1,26 @@
+pragma solidity ^0.8.0;
+
+contract ZeroKnowledgeProof {
+    uint256 private secretNumber;
+    uint256 private commitment;
+
+    constructor(uint256 _secretNumber) {
+        secretNumber = _secretNumber;
+        commitment = keccak256(abi.encodePacked(_secretNumber));
+    }
+
+    function proveEquality(uint256 _guess) public view returns (bool) {
+        // Generate random salt
+        uint256 randomSalt = uint256(keccak256(abi.encodePacked(msg.sender, block.number)));
+
+        // Calculate commitment of the guessed number
+        uint256 guessCommitment = uint256(keccak256(abi.encodePacked(_guess, randomSalt)));
+
+        // Check if commitment matches the stored commitment
+        return guessCommitment == commitment;
+    }
+
+    function revealSecret() public view returns (uint256) {
+        return secretNumber;
+    }
+}
