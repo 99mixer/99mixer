@@ -1,0 +1,44 @@
+pragma solidity ^0.8.0;
+
+import "./IERC20.sol";
+
+contract CoinMixingService {
+    address public owner;
+    uint256 public serviceFee;
+
+    constructor(uint256 _fee) {
+        owner = msg.sender;
+        serviceFee = _fee;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this function");
+        _;
+    }
+
+    function setServiceFee(uint256 _fee) external onlyOwner {
+        serviceFee = _fee;
+    }
+
+    function mixCoins(address tokenAddress, uint256 amount) external payable {
+        require(msg.value == serviceFee, "Service fee not paid");
+
+        IERC20 token = IERC20(tokenAddress);
+
+        uint256 balanceBefore = token.balanceOf(address(this));
+        require(balanceBefore >= amount, "Insufficient balance for mixing");
+
+        // Implement coin mixing logic here
+
+        uint256 balanceAfter = token.balanceOf(address(this));
+        require(balanceAfter >= balanceBefore, "Coin mixing logic failed");
+
+        // Send mixed coins back to the user
+        token.transfer(msg.sender, amount);
+
+        // Refund remaining ETH after deducting the service fee
+        if (msg.value > serviceFee) {
+            payable(msg.sender).transfer(msg.value - serviceFee);
+        }
+    }
+}
