@@ -1,0 +1,69 @@
+pragma solidity ^0.8.0;
+
+contract DAO {
+    address public owner;
+    mapping(address => uint256) public balances;
+    uint256 public totalFunds;
+
+    struct Proposal {
+        address proposer;
+        string description;
+        uint256 votesFor;
+        uint256 votesAgainst;
+        bool executed;
+    }
+
+    Proposal[] public proposals;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this function");
+        _;
+    }
+
+    function contribute() external payable {
+        balances[msg.sender] += msg.value;
+        totalFunds += msg.value;
+    }
+
+    function createProposal(string memory description) external {
+        require(balances[msg.sender] > 0, "Must have balance to create proposal");
+        
+        proposals.push(Proposal({
+            proposer: msg.sender,
+            description: description,
+            votesFor: 0,
+            votesAgainst: 0,
+            executed: false
+        }));
+    }
+
+    function vote(uint256 proposalIndex, bool support) external {
+        require(proposalIndex < proposals.length, "Invalid proposal index");
+        require(balances[msg.sender] > 0, "Must have balance to vote");
+        require(!proposals[proposalIndex].executed, "Proposal already executed");
+
+        Proposal storage proposal = proposals[proposalIndex];
+
+        if (support) {
+            proposal.votesFor += balances[msg.sender];
+        } else {
+            proposal.votesAgainst += balances[msg.sender];
+        }
+    }
+
+    function executeProposal(uint256 proposalIndex) external onlyOwner {
+        require(proposalIndex < proposals.length, "Invalid proposal index");
+
+        Proposal storage proposal = proposals[proposalIndex];
+        require(!proposal.executed, "Proposal already executed");
+        require(proposal.votesFor > proposal.votesAgainst, "Not enough support for execution");
+
+        // Execute proposal logic here
+        
+        proposal.executed = true;
+    }
+}
